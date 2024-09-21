@@ -1,0 +1,5 @@
+google-ai-generativelanguage
+flask
+gradio
+pytest
+python-dotenv
