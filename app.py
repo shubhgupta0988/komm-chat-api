@@ -1,16 +1,15 @@
 from flask import Flask, request, jsonify
-import os
-from dotenv import load_dotenv
-load_dotenv()
-
 import google.generativeai as genai
 import os
+from dotenv import load_dotenv
+from functools import wraps
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+load_dotenv()
 
 app = Flask(__name__)
 
-# Ensure you have set the GOOGLE_APPLICATION_CREDENTIALS environment variable
+genai.configure(api_key=os.getenv("GOOGLE_AI_API_KEY"))
+
 safety_settings={
                 "HATE": "MEDIUM",
                 "HARASSMENT": "MEDIUM",
@@ -33,25 +32,30 @@ def complete_chat():
     try:
         if not request.is_json:
             return jsonify({"error": "Request must be JSON"}), 400
-                
-        data = request.get_json()
+
+        data = request.json
         partial_text = data.get('partial_text')
+
+        if not partial_text:
+            return jsonify({"error": "Missing 'partial_text' in request body"}), 400
 
         if len(partial_text) > 200:
             return jsonify({"error": "Text length exceeded"}), 400
-
-        if not partial_text:
-            return jsonify({'error': 'Missing "partial_text" in request'}), 400
 
         response = chat.send_message(partial_text, stream=False)   
         completed_text = ""
         for chunk in response:
             completed_text += chunk.text
-            
-        return jsonify({'completed_text': completed_text}), 200
 
+        if completed_text != "":
+            return jsonify({"completed_text": completed_text})
+        else:
+            return jsonify({"error": "Failed to generate a response"}), 500
+
+    except genai.types.generation_types.BlockedPromptException as e:
+        return jsonify({"error": "The input was blocked due to safety concerns"}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True)

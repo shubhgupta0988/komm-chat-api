@@ -3,7 +3,7 @@ from flask import json
 from unittest.mock import patch, MagicMock
 import google.generativeai as genai
 from google.generativeai.types import StopCandidateException, BlockedPromptException
-from gemini_api import app
+from app import app
 
 @pytest.fixture
 def client():
